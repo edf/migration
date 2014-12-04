@@ -32,3 +32,7 @@ Migration Considerations
       1.  Script that can migrate just the FOXML and descriptive metadata (no object attached)
       1.  Scripts that can migrate parent compound objects (many files of same type or many files of different types) to new compound objects and create and associate child objects (this is where most of the custom work will be for each site)
 d. Scripts for migrating ETDs (figuring out which PDF is the thesis and which files are cover sheets, datasets, or supplementary materials) 
+
+Notes:
+
+1.  exporting FoxML with the archive switch requires ample space to store the Fedora object with the objext's datastreams.  In this instance the file is stored on an NFS mounted space (a UW-IT SAN)  
