@@ -35,4 +35,4 @@ d. Scripts for migrating ETDs (figuring out which PDF is the thesis and which fi
 
 Notes:
 
-1.  exporting FoxML with the archive switch requires ample space to store the Fedora object with the object's datastreams.  In this instance the file is stored on an NFS mounted space (a UW-IT SAN)  
+1.  from the Fedora 3.4.2 server in the DU colo FoxML with the archive switch is exported.  Ample space is required to store the Fedora object with all the object's datastreams.  In this instance the newly generated FoxML file is stored on an NFS mounted space (a UW-IT SAN) before being ingested into Fedora 3.7.1  
