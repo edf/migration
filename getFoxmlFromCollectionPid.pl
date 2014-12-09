@@ -298,6 +298,7 @@ sub getFoxml {
         next if $resultString =~ m/DISS_XML"$/;
         next if $resultString =~ m/.swf"$/;
         next if $resultString =~ m/.xml"$/;
+        next if $resultString =~ m/internet-tn.jpg"$/;
         next if $resultString =~ m/TN"$/;
         my ( $beginString, $middleString, $endString ) = split( /\//, $resultString );
         $endString =~ s#"##g;
