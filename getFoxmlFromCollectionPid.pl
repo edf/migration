@@ -410,7 +410,7 @@ RELSEXT2
 }
 my $collectionPidDirectory = $collectionPid;
 $collectionPidDirectory =~ s/:/_/g;
-my @ingestCommandOutput = qx( /opt/fedora/client/bin/fedora-ingest.sh dir ./$collectionPidDirectory info:fedora/fedora-system:FOXML-1.1 localhost:8080 adrbot 1adrAdm1n http "" ;date);
+my @ingestCommandOutput = qx( /opt/fedora/client/bin/fedora-ingest.sh dir ./$collectionPidDirectory info:fedora/fedora-system:FOXML-1.1 localhost:8080 fedoraAdmin PASSWORD http "" ;date);
 foreach my $line (@ingestCommandOutput) {
     $line =~ s/\R/\n/g;
     if    ( $line =~ /SUCCESS/ ) { print " $line \n"; }
