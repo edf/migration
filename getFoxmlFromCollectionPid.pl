@@ -130,11 +130,11 @@ sub getFoxml {
         $pid,             $collection,       $contentModel,
         $auditDatastream, $objectProperties, $contentLocation,
         @objText,         $modsDatastream,   $dcDatastream,
-        $dissXmlDatastream
+        $marcDatastream,  $dissXmlDatastream
     );
     my $UserName = 'fedoraAdminBot';
     my $PassWord = 'PASSWORD';
-
+    my ( $nameSpace, $pidNumber ) = split( /:/, $PID );
 #my $foxmlString =  qx(curl -s -u ${UserName}:${PassWord} "http://fedora.coalliance.org:8080/fedora/objects/$PID/export?context=migrate");
     my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "http://fedora.coalliance.org:8080/fedora/objects/$PID/export?context=archive");
     my $xp = XML::XPath->new( xml => $foxmlString );
@@ -260,6 +260,15 @@ sub getFoxml {
         my $resultString = XML::XPath::XMLParser::as_string($node);
         $dcDatastream = $resultString;
     }
+    # get MARCxml datastream for cospl
+       if ($nameSpace =~ /^co$/) {
+            my $xPathQueryForMarc = q!//foxml:datastream[@ID='MARC']!;
+            my $nodesetMarc       = $xp->find($xPathQueryForMarc);
+            foreach my $node ( $nodesetMarc->get_nodelist ) {
+                my $resultString = XML::XPath::XMLParser::as_string($node);
+                $marcDatastream = $resultString;
+            }
+        }   # end get MARCxml datastream for cospl
     my $xPathQueryForMODS = q!//foxml:datastream[@ID='MODS']!;
     my $nodesetMODS       = $xp->find($xPathQueryForMODS);
     foreach my $node ( $nodesetMODS->get_nodelist ) {
@@ -324,6 +333,7 @@ sub getFoxml {
     print $foxmlOut qq(<foxml:digitalObject VERSION="1.1" PID="$pid" xmlns:foxml="info:fedora/fedora-system:def/foxml#" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="info:fedora/fedora-system:def/foxml# http://www.fedora.info/definitions/1/0/foxml1-1.xsd">\n);
     print $foxmlOut "$objectProperties\n";
     print $foxmlOut "$auditDatastream\n";
+    print $foxmlOut "$marcDatastream\n";
     open( my $fh, "<", \$modsDatastream ) or die " cannot open file $! ";   # in memory file handler from a variable
     while (<$fh>) {
         if (m#CONTROL_GROUP="X"#) {
@@ -387,10 +397,10 @@ RELSEXT2
         if (m/ID="$relsIntDatastream"/) {
             s#ID="$relsIntDatastream"#ID="OBJ"#g;
             s#CONTROL_GROUP="X"#CONTROL_GROUP="M"#g;
-            s#LABEL="(.+?)"#LABEL="$relsIntDatastream"#g;
+            s#LABEL="(.+?)"#LABEL="$relsIntDatastream" CREATED="#g;
         }
         if (m#ID="${relsIntDatastream}.#) {
-            s#ID="${relsIntDatastream}.#ID="OBJ.#g;
+            s#LABEL="(.+?)"#LABEL="$relsIntDatastream" CREATED="#g;
         }
         print $foxmlOut $_;
         print $foxmlOut "\n";
@@ -407,12 +417,13 @@ foreach my $line (@ingestCommandOutput) {
     elsif ( $line =~ /WARNING/ ) { print " $line \n"; }
     elsif ( $line =~ m/A detailed log is at / ) {
         chomp $line;
-        print "preprocessed--$line --preprocessed \n";
-        $line = s#A detailed log is at ##g;
+        #print "preprocessed--$line --preprocessed \n";
+        print "$line\n";
+        #$line = s#A detailed log is at ##g;
         my $ingestLogFile = basename($line);
-        print "ingest--$line \n";
+        #print "ingest--$line \n";
     }
-    else { print "line--$line--line\n"; }
+    else { #print "line--$line--line\n"; }
 }
 
 __DATA__
