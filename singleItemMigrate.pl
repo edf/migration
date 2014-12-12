@@ -39,12 +39,12 @@ sub getFoxml {
     my ( $PID, $directoryName, $pidStatus, $UserName, $PassWord, $fedoraURI ) = @_;
     my ($collection,       $contentModel,    $auditDatastream,
         $objectProperties, $contentLocation, @objText,
-        $modsDatastream,   $dcDatastream,    $marcDatastream,
+        $modsDatastream,   $policyDatastream, $dcDatastream,    $marcDatastream,
         $dissXmlDatastream
     );
     my ( $nameSpace, $pidNumber ) = split( /:/, $PID );
-    my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=migrate");
-#   my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=archive");
+#   my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=migrate");
+    my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=archive");
     my $xp                   = XML::XPath->new( xml => $foxmlString );
     my $xPathQueryForVersion = q!//foxml:digitalObject/@VERSION!;
     my $nodesetVersion       = $xp->find($xPathQueryForVersion);
@@ -86,6 +86,26 @@ sub getFoxml {
     my $nodesetOldStyleCollectionLower =
       $xp->find($xPathQueryForOldStyleCollectionLower);
     foreach my $node ( $nodesetOldStyleCollectionLower->get_nodelist ) {
+        my $resultString = XML::XPath::XMLParser::as_string($node);
+        my ( $beginString, $endString ) = split( /\//, $resultString );
+        $endString =~ s#"##g;
+        if ( $endString ne "" ) {
+            $collection = $endString;
+        }
+    }
+    my $xPathQueryForOldStyleCollectionRel = q!//foxml:datastream[@ID="RELS-EXT"]/foxml:datastreamVersion[last()]/foxml:xmlContent/rdf:RDF/rdf:Description/rel:isMemberOf/@rdf:resource!;
+    my $nodesetOldStyleCollectionRel = $xp->find($xPathQueryForOldStyleCollectionRel);
+    foreach my $node ( $nodesetOldStyleCollectionRel->get_nodelist ) {
+        my $resultString = XML::XPath::XMLParser::as_string($node);
+        my ( $beginString, $endString ) = split( /\//, $resultString );
+        $endString =~ s#"##g;
+        if ( $endString ne "" ) {
+            $collection = $endString;
+        }
+    }
+    my $xPathQueryForOldStyleCollectionRelLowerCase = q!//foxml:datastream[@ID="RELS-EXT"]/foxml:datastreamVersion[last()]/foxml:xmlContent/rdf:RDF/rdf:description/rel:isMemberOf/@rdf:resource!;
+    my $nodesetOldStyleCollectionRelLowerCase = $xp->find($xPathQueryForOldStyleCollectionRelLowerCase);
+    foreach my $node ( $nodesetOldStyleCollectionRelLowerCase->get_nodelist ) {
         my $resultString = XML::XPath::XMLParser::as_string($node);
         my ( $beginString, $endString ) = split( /\//, $resultString );
         $endString =~ s#"##g;
@@ -141,6 +161,12 @@ sub getFoxml {
     foreach my $node ( $nodesetAudit->get_nodelist ) {
         my $resultString = XML::XPath::XMLParser::as_string($node);
         $auditDatastream = $resultString;
+    }
+    my $xPathQueryForPolicy = q!//foxml:datastream[@ID='POLICY']!;
+    my $nodesetPolicy       = $xp->find($xPathQueryForPolicy);
+    foreach my $node ( $nodesetPolicy->get_nodelist ) {
+        my $resultString = XML::XPath::XMLParser::as_string($node);
+        $policyDatastream = $resultString;
     }
     my $xPathQueryForDc = q!//foxml:datastream[@ID='DC']!;
     my $nodesetDc       = $xp->find($xPathQueryForDc);
@@ -227,6 +253,7 @@ sub getFoxml {
     print $foxmlOut "$objectProperties\n";
     print $foxmlOut "$marcDatastream\n";
     print $foxmlOut "$auditDatastream\n";
+    print $foxmlOut "$policyDatastream\n";
     open( my $fh, "<", \$modsDatastream ) or die " cannot open file $! ";   # in memory file handler from a variable
 
     while (<$fh>) {
@@ -283,7 +310,7 @@ RELSEXT
             </rdf:Description>
         </rdf:RDF>
       </foxml:xmlContent>
-    </foxml:datastreamVersion>  
+    </foxml:datastreamVersion>
 </foxml:datastream>
 RELSEXT2
     foreach (@objText) {
