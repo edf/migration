@@ -13,7 +13,6 @@ if ( $#ARGV != 0 ) {
     print "\n Usage is $0 <text file with pids> \n\n";
     exit(8);
 }
-
 my $fileName = $ARGV[0];
 chomp $fileName;
 
@@ -34,13 +33,23 @@ my $fedoraURI =
   . $fedoraContext ; #my $fedoraURI = $ServerName . ":" . $ServerPort . "/" . $fedoraContext . "/objects";
 
 my $timeStamp = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
-my $directoryName = "set-" . $timeStamp;
+my $directoryName = "$fileName-" . $timeStamp;
+print "$directoryName\n";
+my $pidCounter = 0;
+my $errorCounter = 0;
 
 while ( my $pid = <$fh> ) {
     chomp $pid;
     my ( $nameSpace, $pidNumber ) = split( /:/, $pid );
     my $pidStatus = "active";
-    getFoxml( $pid, $directoryName, $pidStatus, $UserName, $PassWord, $fedoraURI );
+    eval {getFoxml( $pid, $directoryName, $pidStatus, $UserName, $PassWord, $fedoraURI ); };
+    $pidCounter++;
+    if ( $@ ) {
+          my $timeStampWarn = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
+          warn qq($timeStampWarn ERROR: $pid has an error\n$@\n);
+          $errorCounter++;
+        }
+
 }    # end of file reading loop
 
 sub getFoxml {
@@ -49,12 +58,12 @@ sub getFoxml {
         $pid,             $collection,       $contentModel,
         $auditDatastream, $objectProperties, $contentLocation,
         @objText,         $modsDatastream,   $dcDatastream,
-        $marcDatastream,  $dissXmlDatastream
+        $marcDatastream,  $policyDatastream, $dissXmlDatastream
     );
     my ( $nameSpace, $pidNumber ) = split( /:/, $PID );
 
-    my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=migrate");
-#    my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=archive");
+#    my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=migrate");
+    my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=archive");
     my $xp                   = XML::XPath->new( xml => $foxmlString );
     my $xPathQueryForVersion = q!//foxml:digitalObject/@VERSION!;
     my $nodesetVersion       = $xp->find($xPathQueryForVersion);
@@ -124,6 +133,26 @@ sub getFoxml {
             $collection = $endString;
         }
     }
+    my $xPathQueryForOldStyleCollectionRel = q!//foxml:datastream[@ID="RELS-EXT"]/foxml:datastreamVersion[last()]/foxml:xmlContent/rdf:RDF/rdf:Description/rel:isMemberOf/@rdf:resource!;
+    my $nodesetOldStyleCollectionRel = $xp->find($xPathQueryForOldStyleCollectionRel);
+    foreach my $node ( $nodesetOldStyleCollectionRel->get_nodelist ) {
+        my $resultString = XML::XPath::XMLParser::as_string($node);
+        my ( $beginString, $endString ) = split( /\//, $resultString );
+        $endString =~ s#"##g;
+        if ( $endString ne "" ) {
+            $collection = $endString;
+        }
+    }
+    my $xPathQueryForOldStyleCollectionRelLowerCase = q!//foxml:datastream[@ID="RELS-EXT"]/foxml:datastreamVersion[last()]/foxml:xmlContent/rdf:RDF/rdf:description/rel:isMemberOf/@rdf:resource!;
+    my $nodesetOldStyleCollectionRelLowerCase = $xp->find($xPathQueryForOldStyleCollectionRelLowerCase);
+    foreach my $node ( $nodesetOldStyleCollectionRelLowerCase->get_nodelist ) {
+        my $resultString = XML::XPath::XMLParser::as_string($node);
+        my ( $beginString, $endString ) = split( /\//, $resultString );
+        $endString =~ s#"##g;
+        if ( $endString ne "" ) {
+            $collection = $endString;
+        }
+    }
     my $xPathQueryForOldStyleCollection = q!//foxml:datastream[@ID="RELS-EXT"]/foxml:datastreamVersion[last()]/foxml:xmlContent/rdf:RDF/rdf:Description/isMemberOf/@rdf:resource!;
     my $nodesetOldStyleCollection = $xp->find($xPathQueryForOldStyleCollection);
     foreach my $node ( $nodesetOldStyleCollection->get_nodelist ) {
@@ -173,6 +202,12 @@ sub getFoxml {
         my $resultString = XML::XPath::XMLParser::as_string($node);
         $auditDatastream = $resultString;
     }
+    my $xPathQueryForPolicy = q!//foxml:datastream[@ID='POLICY']!;
+    my $nodesetPolicy       = $xp->find($xPathQueryForPolicy);
+    foreach my $node ( $nodesetPolicy->get_nodelist ) {
+        my $resultString = XML::XPath::XMLParser::as_string($node);
+        $policyDatastream = $resultString;
+    }
     my $xPathQueryForDc = q!//foxml:datastream[@ID='DC']!;
     my $nodesetDc       = $xp->find($xPathQueryForDc);
     foreach my $node ( $nodesetDc->get_nodelist ) {
@@ -219,15 +254,13 @@ sub getFoxml {
         next if $resultString =~ m/DISS_XML"$/;
         next if $resultString =~ m/.swf"$/;
         next if $resultString =~ m/.xml"$/;
+        next if $resultString =~ m/internet-tn.jpg"$/;
+        next if $resultString =~ m/TN"$/;
         next if $resultString =~ m/.jp2"$/;
         next if $resultString =~ m/lg.jpg"$/;
         next if $resultString =~ m/sm.jpg"$/;
-        next if $resultString =~ m/internet-tn.jpg"$/;
-        next
-          if $resultString =~ m/TN"$/; # print "\ndatastream-- $resultString\n";
-        my ( $beginString, $middleString, $endString ) =
-          split( /\//, $resultString );
 
+        my ( $beginString, $middleString, $endString ) = split( /\//, $resultString );
         $endString =~ s#"##g;
         $relsIntDatastream = $endString;
         chomp $relsIntDatastream;
@@ -258,6 +291,7 @@ sub getFoxml {
     print $foxmlOut "$objectProperties\n";
     print $foxmlOut "$marcDatastream\n";
     print $foxmlOut "$auditDatastream\n";
+    print $foxmlOut "$policyDatastream\n";
     open( my $fh, "<", \$modsDatastream ) or die " cannot open file $! ";   # in memory file handler from a variable
 
     while (<$fh>) {
@@ -297,10 +331,8 @@ sub getFoxml {
 RELSEXT
     print $foxmlOut qq(            <rdf:Description rdf:about="info:fedora/$pid">\n);
     print $foxmlOut qq(                <fedora:isMemberOfCollection rdf:resource="info:fedora/$collectionPid"/>\n);
-    # content model based on filename extention    using $relsIntDatastream
-    print "\ndatastream== $relsIntDatastream\n";
-    my ( $filename, $dir, $ext ) = fileparse( $relsIntDatastream, qr/\.[^.]*/ )
-      ;    # split argument from commandline into components
+    # content model based on filename extention    using $relsIntDatastream          # print "\ndatastream== $relsIntDatastream\n";
+    my ( $filename, $dir, $ext ) = fileparse( $relsIntDatastream, qr/\.[^.]*/ ) ;    # split argument from commandline into components
     if ( $ext =~ /pdf/ ) {
         print $foxmlOut qq(                <fedora-model:hasModel rdf:resource="info:fedora/islandora:sp_pdf"/>\n);
     }
@@ -310,25 +342,38 @@ RELSEXT
     elsif ( $ext =~ /tif/ ) {
         print $foxmlOut qq(                <fedora-model:hasModel rdf:resource="info:fedora/islandora:sp_large_image_cmodel"/>\n);
     }
-    else { print "\nERROR: undefined file extension\n"; exit(8); }
+    else { 
+            my $timeStampError = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
+            print "\n$timeStampError ERROR: $pid has an undefined file extension $ext\n\n"; 
+            next;  
+            }
 
     print $foxmlOut <<RELSEXT2;
             </rdf:Description>
         </rdf:RDF>
       </foxml:xmlContent>
-    </foxml:datastreamVersion>  
+    </foxml:datastreamVersion>
 </foxml:datastream>
 RELSEXT2
     foreach (@objText) {
         chomp;
-        if (m/ID="$relsIntDatastream"/) {
-            s#ID="$relsIntDatastream"#ID="OBJ"#g;
-            s#CONTROL_GROUP="X"#CONTROL_GROUP="M"#g;
-            s#LABEL="(.+?)"#LABEL="$relsIntDatastream" CREATED="#g;
+        if ( $nameSpace =~ /^co$/ ) {
+            if (m/ID="$relsIntDatastream"/) {
+                s#ID="$relsIntDatastream"#ID="OBJ"#g;
+                s#CONTROL_GROUP="X"#CONTROL_GROUP="M"#g;
+                s#LABEL="(.+?)"#LABEL="$relsIntDatastream" CREATED="#g;
+            }
+            else {
+                s#ID="${relsIntDatastream}.#ID="OBJ.#g;
+                s#LABEL="(.+?)"#LABEL="$relsIntDatastream" CREATED="#g;
+            }
         }
         else {
-            s#ID="${relsIntDatastream}.#ID="OBJ.#g;
-            s#LABEL="(.+?)"#LABEL="$relsIntDatastream" CREATED="#g;
+            if (m/ID="$relsIntDatastream"/) {
+                s#ID="$relsIntDatastream"#ID="OBJ"#g;
+                s#CONTROL_GROUP="X"#CONTROL_GROUP="M"#g;
+                s#LABEL="(.+?)"#LABEL="$relsIntDatastream" #g;
+            }
         }
         print $foxmlOut $_;
         print $foxmlOut "\n";
@@ -336,6 +381,10 @@ RELSEXT2
     print $foxmlOut "</foxml:digitalObject>\n";
 }
 
+if ( $pidCounter > $errorCounter ) {
+
+my $timeStampIngest = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
+print "\nStarting fedora-ingest on $fileName at $timeStampIngest with $errorCounter errors of $pidCounter PIDs\n";
 my @ingestCommandOutput = qx( /opt/fedora/client/bin/fedora-ingest.sh dir ./$directoryName info:fedora/fedora-system:FOXML-1.1 localhost:8080 $newUserName $newPassWord http "" ;date);
 
 foreach my $line (@ingestCommandOutput) {
@@ -345,12 +394,17 @@ foreach my $line (@ingestCommandOutput) {
     elsif ( $line =~ /WARNING/ ) { print " $line \n"; }
     elsif ( $line =~ m/A detailed log is at / ) {
         chomp $line;
-        print "$line\n";
+        print "$fileName-$line\n";
         my $ingestLogFile = basename($line);
     }
     else { #   print "line--$line--line\n";
     }
 }
+
+} else {
+       print "No PIDs to process\n";
+}
+
 
 __DATA__
 from s:\Project\Islandora 7\IslandoraContentModels.csv
@@ -367,3 +421,4 @@ Newspaper Issue,islandora:newspaperIssueCModel,newsIssue
 Newspaper Page,islandora:newspaperPageCModel,newsPage
 PDF,islandora:sp_pdf,pdf
 Video,islandora:sp_videoCModel,video
+
