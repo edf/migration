@@ -52,6 +52,30 @@ while ( my $pid = <$fh> ) {
 
 }    # end of file reading loop
 
+if ( $pidCounter > $errorCounter ) {
+
+my $timeStampIngest = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
+print "\nStarting fedora-ingest on $fileName at $timeStampIngest with $errorCounter errors of $pidCounter PIDs\n";
+my @ingestCommandOutput = qx( /opt/fedora/client/bin/fedora-ingest.sh dir ./$directoryName info:fedora/fedora-system:FOXML-1.1 localhost:8080 $newUserName $newPassWord http "" ;date);
+
+foreach my $line (@ingestCommandOutput) {
+    $line =~ s/\R/\n/g;
+    if    ( $line =~ /SUCCESS/ ) { print " $line \n"; }
+    elsif ( $line =~ /ERROR/ )   { print " $line \n"; }
+    elsif ( $line =~ /WARNING/ ) { print " $line \n"; }
+    elsif ( $line =~ m/A detailed log is at / ) {
+        chomp $line;
+        print "$fileName-$line\n";
+        my $ingestLogFile = basename($line);
+    }
+    else { #   print "line--$line--line\n";
+    }
+}
+
+} else {
+       print "No PIDs to process\n";
+}
+
 sub getFoxml {
     my ( $PID, $directoryName, $status, $UserName, $PassWord, $fedoraURI ) = @_;
     my (
@@ -379,30 +403,6 @@ RELSEXT2
         print $foxmlOut "\n";
     }
     print $foxmlOut "</foxml:digitalObject>\n";
-}
-
-if ( $pidCounter > $errorCounter ) {
-
-my $timeStampIngest = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
-print "\nStarting fedora-ingest on $fileName at $timeStampIngest with $errorCounter errors of $pidCounter PIDs\n";
-my @ingestCommandOutput = qx( /opt/fedora/client/bin/fedora-ingest.sh dir ./$directoryName info:fedora/fedora-system:FOXML-1.1 localhost:8080 $newUserName $newPassWord http "" ;date);
-
-foreach my $line (@ingestCommandOutput) {
-    $line =~ s/\R/\n/g;
-    if    ( $line =~ /SUCCESS/ ) { print " $line \n"; }
-    elsif ( $line =~ /ERROR/ )   { print " $line \n"; }
-    elsif ( $line =~ /WARNING/ ) { print " $line \n"; }
-    elsif ( $line =~ m/A detailed log is at / ) {
-        chomp $line;
-        print "$fileName-$line\n";
-        my $ingestLogFile = basename($line);
-    }
-    else { #   print "line--$line--line\n";
-    }
-}
-
-} else {
-       print "No PIDs to process\n";
 }
 
 
