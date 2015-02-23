@@ -438,6 +438,7 @@ sub getFoxml {
         next if $resultString =~ m/DISS_XML"$/;
         next if $resultString =~ m/.swf"$/;
         next if $resultString =~ m/.xml"$/;
+        next if $resultString =~ m/.dip.mp4"$/;      # example codu:66764
         next if $resultString =~ m/internet-tn.jpg"$/;
         next if $resultString =~ m/access-tn.jpg"$/;
         next if $resultString =~ m/TN"$/;
@@ -447,6 +448,7 @@ sub getFoxml {
         next if $resultString =~ m/_access.jpg"$/;
         next if $resultString =~ m/.jpg"$/;
         next if $resultString =~ m/_access"$/;
+        #next if $resultString =~ m/_access.pdf"$/;  # example codu:64944
 
         my ( $beginString, $middleString, $endString ) = split( /\//, $resultString );
         $endString =~ s#"##g;
