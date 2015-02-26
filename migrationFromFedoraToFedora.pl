@@ -101,7 +101,7 @@ qx(curl -s -u ${UserName}:${PassWord} "$fedoraURI/objects/$option/objectXML");
                   . $collectionPid
                   . '>  or $member <fedora-rels-ext:isMemberOfCollection> <info:fedora/'
                   . $collectionPid
-                  . '> ) order by $member; ';    # print "\nQuery: $listCollectionMembershipSearchString \n";
+                  . '> ) and $object <fedora-model:state> <info:fedora/fedora-system:def/model#iActive> order by $member; ';    # print "\nQuery: $listCollectionMembershipSearchString \n";
                 my $listCollectionMembershipSearchStringEncode = uri_escape($listCollectionMembershipSearchString);
                 my $pidQuery = qq($fedoraURI/risearch?type=tuples&lang=itql&format=CSV&dt=on&query=$listCollectionMembershipSearchStringEncode);
                 my $pidQ = get $pidQuery;
@@ -227,7 +227,7 @@ sub usage {
 
 sub getFoxml {
     my ( $PID, $directoryName, $status, $UserName, $PassWord, $fedoraURI ) = @_;
-#   print "\n--$PID--\n";
+    print "\n--$PID--\n";
     my (
         $pid,             $collection,       $contentModel,
         $auditDatastream, $objectProperties, $contentLocation,
@@ -446,7 +446,7 @@ sub getFoxml {
         next if $resultString =~ m/lg.jpg"$/;
         next if $resultString =~ m/sm.jpg"$/;
         next if $resultString =~ m/_access.jpg"$/;
-        next if $resultString =~ m/.jpg"$/;
+        #next if $resultString =~ m/.jpg"$/;
         next if $resultString =~ m/_access"$/;
         #next if $resultString =~ m/_access.pdf"$/;  # example codu:64944
 
