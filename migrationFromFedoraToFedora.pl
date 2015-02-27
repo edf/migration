@@ -92,8 +92,9 @@ if ( $option =~ m/:/ ) {    # matches a PID
                   . $collectionPid
                   . '>  or $member <fedora-rels-ext:isMemberOfCollection> <info:fedora/'
                   . $collectionPid
-                  . '> ) and $object <fedora-model:state> <info:fedora/fedora-system:def/model#iActive> order by $member; '
-                  ; # print "\nQuery: $listCollectionMembershipSearchString \n";
+                  . '> ) and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active> order by $member; '
+                  ; 
+                print "\nQuery: $listCollectionMembershipSearchString \n";
                 my $listCollectionMembershipSearchStringEncode =
                   uri_escape($listCollectionMembershipSearchString);
                 my $pidQuery = qq($fedoraURI/risearch?type=tuples&lang=itql&format=CSV&dt=on&query=$listCollectionMembershipSearchStringEncode);
