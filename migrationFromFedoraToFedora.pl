@@ -75,11 +75,18 @@ if ( $option =~ m/:/ ) {    # matches a PID
         my $resultString = XML::XPath::XMLParser::as_string($node);
         $resultString =~ s/^\s+//g;    #  strip white space before string
         $resultString =~ s/\s+$//g;    #  strip white space after string
-                                       #print "$resultString\n";
 
         my @answer = split( '\R', $resultString );    #create array from string
 
         foreach my $line (@answer) {
+            next if $line =~ m#<foxml:xmlContent>#;
+            next if $line =~ m#<rdf:RDF #;
+            next if $line =~ m#<rdf:description #;
+            next if $line =~ m#<rel:isMemberOf#;
+            next if $line =~ m#</rdf:description>#;
+            next if $line =~ m#</rdf:RDF>#;
+            next if $line =~ m#</foxml:xmlContent>#;
+            print "Result => $line\n";
             if ( $line =~ /BasicCollection/ ) {       #is PID a collection PID?
                     #print "Collection Content Model -- $line\n";
                 $pidType       = "collection";
@@ -124,7 +131,7 @@ if ( $option =~ m/:/ ) {    # matches a PID
 
                     # getFoxml
                     $pid = $line;
-                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$newFedoraURI/objects/$pid/validate");
+                    my $objectTest =qx(curl -s -u ${newUserName}:${newPassWord}  "$newFedoraURI/objects/$pid/validate");
                     if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
                     my $pidStatus = "active";
 
@@ -143,21 +150,24 @@ if ( $option =~ m/:/ ) {    # matches a PID
                     }  else { print "$pid already exists in adr-fcrepo\n"; }
                 }
 
-            }
-            elsif ( $line =~ /BasicObject/ ) {
+            } elsif ( $line =~ m/BasicObject/ ) {
 
                 #print "single PID -- $line\n";
                 $pidType = "single";
+                my $objectPid = $option;
+                print "single PID -- $line\n";
 
                 #TODO getFoxml
 
-                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$newFedoraURI/objects/$pid/validate");
-                    if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
+                    my $curlCommand = qq(curl -s -u ${newUserName}:${newPassWord}  "$newFedoraURI/$objectPid/validate");
+                    print "$curlCommand\n";
+                    my $objectTest =qx($curlCommand);
+                    if ($objectTest =~ m#Object not found in low-level storage: $objectPid#)  {
 
                 my $pidStatus = "active";
                 eval {
                     getFoxml(
-                        $option,   $directoryName, $pidStatus,
+                        $objectPid,   $directoryName, $pidStatus,
                         $UserName, $PassWord,      $fedoraURI
                     );
                 };
@@ -165,10 +175,10 @@ if ( $option =~ m/:/ ) {    # matches a PID
                 if ($@) {
                     my $timeStampWarn =
                       POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
-                    warn qq($timeStampWarn ERROR: $pid has an error\n$@\n);
+                    warn qq($timeStampWarn ERROR: $objectPid has an error\n$@\n);
                     $errorCounter++;
                     }
-                } else { print "$pid already exists in adr-fcrepo\n"; }
+                } else { print "$objectPid already exists in adr-fcrepo using single item approach\n"; }
 
             }
             elsif ( $line =~ /co:coPublications/ ) {
@@ -533,7 +543,7 @@ q!//foxml:datastream[@ID="RELS-INT"]/foxml:datastreamVersion[last()]/foxml:xmlCo
         next if $resultString =~ m/sm.jpg"$/;
         next if $resultString =~ m/_access.jpg"$/;
 
-        #next if $resultString =~ m/.jpg"$/;
+        next if $resultString =~ m/.jpg"$/;
         next if $resultString =~ m/_access"$/;
 
         #next if $resultString =~ m/_access.pdf"$/;  # example codu:64944
