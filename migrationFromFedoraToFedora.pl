@@ -28,7 +28,7 @@ my $BlueText    = "\e[0;44m";
 my $NormalText  = "\e[0m";
 my (
     $ServerName, $ServerPort,  $fedoraContext, $UserName,
-    $PassWord,   $newUserName, $newPassWord
+    $PassWord,   $newServerName, $newServerPort, $newFedoraContext, $newUserName, $newPassWord
 );    # local settings
 my $configFile = "settings.config";
 open my $configFH, "<", "$configFile"
@@ -39,7 +39,8 @@ eval $config;
 die
 "Couldn't interpret the configuration file ($configFile) that was given.\nError details follow: $@\n"
   if $@;
-my $fedoraURI = $ServerName . ":"  . $ServerPort . "/"  . $fedoraContext  ; #my $fedoraURI = $ServerName . ":" . $ServerPort . "/" . $fedoraContext . "/objects";
+my $fedoraURI = $ServerName . ":"  . $ServerPort . "/"  . $fedoraContext  ; 
+my $newFedoraURI = $newServerName . ":" . $newServerPort . "/" . $newFedoraContext . "/objects";
 
 my $timeStamp = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
 my $dirName = $option;
@@ -123,7 +124,7 @@ if ( $option =~ m/:/ ) {    # matches a PID
 
                     # getFoxml
                     $pid = $line;
-                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$fedoraURI/objects/$pid/validate");
+                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$newFedoraURI/objects/$pid/validate");
                     if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
                     my $pidStatus = "active";
 
@@ -150,7 +151,7 @@ if ( $option =~ m/:/ ) {    # matches a PID
 
                 #TODO getFoxml
 
-                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$fedoraURI/objects/$pid/validate");
+                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$newFedoraURI/objects/$pid/validate");
                     if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
 
                 my $pidStatus = "active";
@@ -204,7 +205,7 @@ else {
 
     while ( my $pid = <$fh> ) {
         chomp $pid;
-        my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$fedoraURI/objects/$pid/validate");
+        my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$newFedoraURI/objects/$pid/validate");
         if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
 
  
