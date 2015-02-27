@@ -122,6 +122,8 @@ if ( $option =~ m/:/ ) {    # matches a PID
 
                     # getFoxml
                     $pid = $line;
+                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$fedoraURI/objects/$pid/validate");
+                    if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
                     my $pidStatus = "active";
 
 #print "\nPID: $pid DIR: $directoryName Status: $pidStatus User: $UserName Password: $PassWord URI: $fedoraURI \n";
@@ -135,8 +137,8 @@ if ( $option =~ m/:/ ) {    # matches a PID
                           POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
                         warn qq($timeStampWarn ERROR: $pid has an error\n$@\n);
                         $errorCounter++;
-                    }
-
+                        }
+                    }  else { print "$pid already exists in adr-fcrepo\n"; }
                 }
 
             }
@@ -146,6 +148,10 @@ if ( $option =~ m/:/ ) {    # matches a PID
                 $pidType = "single";
 
                 #TODO getFoxml
+
+                    my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$fedoraURI/objects/$pid/validate");
+                    if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
+
                 my $pidStatus = "active";
                 eval {
                     getFoxml(
@@ -159,7 +165,8 @@ if ( $option =~ m/:/ ) {    # matches a PID
                       POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
                     warn qq($timeStampWarn ERROR: $pid has an error\n$@\n);
                     $errorCounter++;
-                }
+                    }
+                } else { print "$pid already exists in adr-fcrepo\n"; }
 
             }
             elsif ( $line =~ /co:coPublications/ ) {
@@ -196,6 +203,13 @@ else {
 
     while ( my $pid = <$fh> ) {
         chomp $pid;
+        my $objectTest =qx(curl -s -u ${UserName}:${PassWord}  "$fedoraURI/objects/$pid/validate");
+        if ($objectTest =~ m#Object not found in low-level storage: $pid#)  {
+
+ 
+
+
+
         my ( $nameSpace, $pidNumber ) = split( /:/, $pid );
         my $pidStatus = "active";
 
@@ -209,7 +223,8 @@ else {
             my $timeStampWarn = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
             warn qq($timeStampWarn ERROR: $pid has an error\n$@\n);
             $errorCounter++;
-        }
+            }
+        } else { print "$pid already exists in adr-fcrepo\n"; }
 
     }    # end of file reading loop
 
