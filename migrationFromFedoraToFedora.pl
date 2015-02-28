@@ -77,7 +77,7 @@ if ( $option =~ m/:/ ) {    # matches a PID
             next if $line =~ m#</rdf:description>#;
             next if $line =~ m#</rdf:RDF>#;
             next if $line =~ m#</foxml:xmlContent>#;
-            print "Result => $line\n";
+            #print "Result => $line\n";
 
             if ( $line =~ /BasicCollection/ ) {       #is PID a collection PID?
                                                       #print "Collection Content Model -- $line\n";
@@ -94,7 +94,7 @@ if ( $option =~ m/:/ ) {    # matches a PID
                     . '>  or $member <fedora-rels-ext:isMemberOfCollection> <info:fedora/'
                     . $collectionPid
                     . '> ) and $object <fedora-model:state> <info:fedora/fedora-system:def/model#Active> order by $member; ';
-                print "\nQuery: $listCollectionMembershipSearchString \n";
+                #print "\nQuery: $listCollectionMembershipSearchString \n";
                 my $listCollectionMembershipSearchStringEncode = uri_escape($listCollectionMembershipSearchString);
                 my $pidQuery                                   = qq($fedoraURI/risearch?type=tuples&lang=itql&format=CSV&dt=on&query=$listCollectionMembershipSearchStringEncode);
                 my $pidQ                                       = get $pidQuery;
@@ -119,21 +119,21 @@ if ( $option =~ m/:/ ) {    # matches a PID
                 foreach my $line (@sortedListCollectionPid) {
 
                     # getFoxml
-                    $pid = $line;
-                    my $objectTest = qx(curl -s -u ${newUserName}:${newPassWord}  "$newFedoraURI/objects/$pid/validate");
-                    if ( $objectTest =~ m#Object not found in low-level storage: $pid# ) {
+                    my $pidIn = $line;
+                    my $objectTest = qx(curl -s -u ${newUserName}:${newPassWord}  "$newFedoraURI/$pidIn/validate");
+                    if ( $objectTest =~ m#Object not found in low-level storage: $pidIn# ) {
                         my $pidStatus = "active";
 
                         #print "\nPID: $pid DIR: $directoryName Status: $pidStatus User: $UserName Password: $PassWord URI: $fedoraURI \n";
-                        eval { getFoxml( $pid, $directoryName, $pidStatus, $UserName, $PassWord, $fedoraURI ); };
+                        eval { getFoxml( $pidIn, $directoryName, $pidStatus, $UserName, $PassWord, $fedoraURI ); };
                         $pidCounter++;
                         if ($@) {
                             my $timeStampWarn = POSIX::strftime( "%Y-%m%d-%H%M-%S", localtime );
-                            warn qq($timeStampWarn ERROR: $pid has an error\n$@\n);
+                            warn qq($timeStampWarn ERROR: $pidIn has an error\n$@\n);
                             $errorCounter++;
                         }
                     }
-                    else { print "$pid already exists in adr-fcrepo\n"; }
+                    else { print "$line already exists in adr-fcrepo\n"; }
                 }
 
             }
@@ -281,7 +281,7 @@ sub getFoxml {
     my ( $pid, $collection, $contentModel, $auditDatastream, $objectProperties, $contentLocation, @objText, $modsDatastream, $dcDatastream, $marcDatastream, $policyDatastream, $dissXmlDatastream );
     my ( $nameSpace, $pidNumber ) = split( /:/, $PID );
 
-    #   my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=migrate");
+    #my $foxmlString = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=migrate");
     my $foxmlString          = qx(curl -s -u ${UserName}:${PassWord} "${fedoraURI}/objects/$PID/export?context=archive");
     my $xp                   = XML::XPath->new( xml => $foxmlString );
     my $xPathQueryForVersion = q!//foxml:digitalObject/@VERSION!;
@@ -491,7 +491,7 @@ sub getFoxml {
         next if $resultString =~ m/sm.jpg"$/;
         next if $resultString =~ m/_access.jpg"$/;
 
-        next if $resultString =~ m/.jpg"$/;
+        next if $resultString =~ m/.tif"$/;
         next if $resultString =~ m/_access"$/;
 
         #next if $resultString =~ m/_access.pdf"$/;  # example codu:64944
