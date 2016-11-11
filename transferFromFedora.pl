@@ -130,7 +130,7 @@ if ( $optionType eq "singleObject" ) {
                 . qq(" />$endOfString\n</foxml:datastreamVersion>\n</foxml:datastream>\n);
             push @foxml, $stingOfDS;
             my $curlCommand
-                = qq(curl -s -u ${UserName}:${PassWord} \"${fedoraURI}/get/$PID/$datastreamFromString\" -o $tmpDirectory/$nicePID/$datastreamFromString);
+                = qq(curl -s --remote-time -u ${UserName}:${PassWord} \"${fedoraURI}/get/$PID/$datastreamFromString\" -o $tmpDirectory/$nicePID/$datastreamFromString);
             system($curlCommand);
         }
     }
